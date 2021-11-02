@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Net.Sockets
 
 namespace Kademlia
 {
@@ -10,10 +11,10 @@ namespace Kademlia
 
         public void StartApiListener()
         {
-            this.StartListener(this.HandleMessage);
+            this.Listen(this.HandleMessage);
         }
 
-        public bool HandleMessage(string message, IPEndPoint ep)
+        public bool HandleMessage(string message, string address, int port, NetworkStream stream)
         {
             string[] argv = message.Split(' ');
 
@@ -32,7 +33,7 @@ namespace Kademlia
 
         public bool Ping(IPEndPoint ep)
         {
-            this.SendWithResponse("PING", ep);
+            // TODO
 
             return true;
         }

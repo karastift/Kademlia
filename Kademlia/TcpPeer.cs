@@ -8,97 +8,127 @@ namespace Kademlia
 {
     class TcpPeer
     {
-        public string Address { set; get; }
-        // port should be constant, but for debugging purposes i have to make it dynamic
-        // when i am debugging, the ports are the "addresses"
-        public int Port;
+        int Port { get; set; }
 
-        UdpClient client;
-        Thread listener;
-
-        public TcpPeer(int port)
-        {
-            this.Address = HelperFunctions.GetLocalIPAddress();
-            this.Port = port;
-
-            this.client = new UdpClient(new IPEndPoint(IPAddress.Parse(this.Address), port));
-        }
+        public TcpPeer(int port) => Port = port;
 
         // sendport should be a constant but for debugging it is dynamic and the address is constant
         public void Send(string message, string address, int port)
         {
-            Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            try
+            {
+                TcpClient client = new TcpClient(address, port);
 
-            byte[] sendbuf = Encoding.ASCII.GetBytes(message);
+                byte[] buffer = Encoding.ASCII.GetBytes(message);
 
-            IPEndPoint ep = new IPEndPoint(IPAddress.Parse(address), port);
-            
-            Console.WriteLine($"[+] Sent '{message}' to '{address}' on port '{port}'.");
+                NetworkStream stream = client.GetStream();
 
-            s.SendTo(sendbuf, ep);
-            s.Close();
+                stream.Write(buffer, 0, buffer.Length);
+
+                Console.WriteLine($"[+] Sent '{message}' to '{address}' on port '{port}'.");
+
+                buffer = new Byte[256];
+
+                String responseData = String.Empty;
+
+                Int32 bytes = stream.Read(buffer, 0, buffer.Length);
+                responseData = Encoding.ASCII.GetString(buffer, 0, bytes);
+
+                Console.WriteLine("[+] Received: {0}", responseData);
+
+                stream.Close();
+                client.Close();
+            }
+            catch (ArgumentNullException e)
+            {
+                Console.WriteLine("ArgumentNullException: {0}", e);
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine("SocketException: {0}", e);
+            }
         }
 
-        public void StartListener(Func<string, IPEndPoint, bool> Callback)
-        {
-            this.listener = new Thread(() => Listen(Callback));
-            this.listener.Start();
+        public void Send(string message, NetworkStream stream)
+        { 
+            try
+            { 
+                byte[] buffer = Encoding.ASCII.GetBytes(message);
+
+                stream.Write(buffer, 0, buffer.Length);
+
+                buffer = new Byte[256];
+
+                String responseData = String.Empty;
+
+                Int32 bytes = stream.Read(buffer, 0, buffer.Length);
+                responseData = Encoding.ASCII.GetString(buffer, 0, bytes);
+
+                Console.WriteLine("[+] Received: {0}", responseData);
+
+                stream.Close();
+            }
+            catch (ArgumentNullException e)
+            {
+                Console.WriteLine("ArgumentNullException: {0}", e);
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine("SocketException: {0}", e);
+            }
         }
 
-        public void StopListener()
+        public void Listen(Func<string, string, int, NetworkStream, bool> Callback)
         {
-            this.listener.Abort();
-        }
-
-        public void Listen(Func<string, IPEndPoint, bool> Callback)
-        {
-            // UdpClient listener = new UdpClient(this.Port);
-            IPEndPoint groupEP = new IPEndPoint(IPAddress.Any, this.Port);
+            TcpListener server = null;
 
             try
             {
+                IPAddress localAddr = IPAddress.Parse("127.0.0.1");
+
+                server = new TcpListener(localAddr, Port);
+                server.Start();
+
+                Byte[] bytes = new Byte[256];
+                String data = null;
+
                 while (true)
                 {
-                    byte[] bytes = client.Receive(ref groupEP);
-                    string message = Encoding.ASCII.GetString(bytes, 0, bytes.Length);
+                    Console.Write("Waiting for a connection... ");
 
-                    Console.WriteLine("running1");
-                    Callback(message, groupEP);
+                    TcpClient client = server.AcceptTcpClient();
+
+                    Console.WriteLine("Connected!");
+
+                    data = null;
+
+                    NetworkStream stream = client.GetStream();
+
+                    int i;
+
+                    while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+                    {
+                        data = Encoding.ASCII.GetString(bytes, 0, i);
+
+                        Console.WriteLine("[+] Received: {0}", data);
+
+                        data = data.ToUpper();
+
+                        // TODO get address and port of client to pass it to the callback function which logs it
+                        Callback(data, client.Client);
+                    }
+
+                    client.Close();
                 }
             }
             catch (SocketException e)
             {
-                Console.WriteLine(e);
+                Console.WriteLine("SocketException: {0}", e);
             }
             finally
             {
-                client.Close();
+                server.Stop();
             }
-        }
-
-        public string SendWithResponse(string message, IPEndPoint ep)
-        {
-            this.Send(message, ep.Address.ToString(), ep.Port);
-
-            // UdpClient listener = new UdpClient(this.Port);
-
-            try
-            {
-                while (true)
-                {
-                    byte[] bytes = client.Receive(ref ep);
-                    string receivedMessage = Encoding.ASCII.GetString(bytes, 0, bytes.Length);
-
-                    Console.WriteLine("running2");
-                    Console.WriteLine(receivedMessage);
-                }
-            }
-            catch (SocketException e)
-            {
-                Console.WriteLine(e);
-            }
-
-            return "";
         }
     }
 }

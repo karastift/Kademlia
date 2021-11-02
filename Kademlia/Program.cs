@@ -15,9 +15,13 @@ namespace Kademlia
 
             Node n = new Node(port);
 
-            n.StartApiListener();
+            n.Listen(PrintRecvData);
+        }
 
-            n.Ping(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(HelperFunctions.GetLocalIPAddress()), Convert.ToInt32(Console.ReadLine())));
+        static bool PrintRecvData(string data, System.Net.Sockets.NetworkStream stream)
+        {
+            Console.WriteLine(data);
+            return true;
         }
     }
 }
