@@ -3,7 +3,7 @@ using System.Net;
 
 namespace Kademlia
 {
-    class Api : UdpPeer
+    class Api : TcpPeer
     {
 
         public Api(int port) : base(port) { }

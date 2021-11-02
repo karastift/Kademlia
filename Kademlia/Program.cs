@@ -11,6 +11,8 @@ namespace Kademlia
             Console.Write("Enter the port of this node: ");
             port = Convert.ToInt32(Console.ReadLine());
 
+            // https://docs.microsoft.com/de-de/dotnet/framework/network-programming/using-an-asynchronous-client-socket
+
             Node n = new Node(port);
 
             n.StartApiListener();

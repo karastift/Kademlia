@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Kademlia
 {
-    class UdpPeer
+    class TcpPeer
     {
         public string Address { set; get; }
         // port should be constant, but for debugging purposes i have to make it dynamic
@@ -16,7 +16,7 @@ namespace Kademlia
         UdpClient client;
         Thread listener;
 
-        public UdpPeer(int port)
+        public TcpPeer(int port)
         {
             this.Address = HelperFunctions.GetLocalIPAddress();
             this.Port = port;
